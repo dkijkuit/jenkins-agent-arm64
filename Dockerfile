@@ -1,4 +1,6 @@
-FROM arm64v8/openjdk:8-jdk-stretch
+FROM arm64v8/openjdk:8-jdk-stretch as agentbase
+
+ARG version=jenkins-agent:arm64-1.5
 
 ARG VERSION=4.6
 ARG user=jenkins
@@ -33,5 +35,20 @@ RUN mkdir /home/${user}/.jenkins && mkdir -p ${AGENT_WORKDIR}
 
 VOLUME /home/${user}/.jenkins
 VOLUME ${AGENT_WORKDIR}
-WORKDIR /home/${user}
+WORKDIR /home/${user}#
 
+# Final image
+FROM agentbase as jenkins-agent-arm64
+
+ARG version
+LABEL Description="This is a base image, which allows connecting Jenkins agents via JNLP protocols" Vendor="Jenkins project" Version="$version"
+
+ARG user=jenkins
+
+USER root
+COPY jenkins-agent /usr/local/bin/jenkins-agent
+RUN chmod +x /usr/local/bin/jenkins-agent &&\
+    ln -s /usr/local/bin/jenkins-agent /usr/local/bin/jenkins-slave
+USER ${user}
+
+ENTRYPOINT ["jenkins-agent"]
